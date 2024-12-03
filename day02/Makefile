@@ -21,4 +21,4 @@ part2:
 clean:
 	rm -f $(DIR_NAME)part2 $(DIR_NAME)part1
 
-.PHONY: all clean $(EXEC_NAME)
+.PHONY: all clean part1 part2
