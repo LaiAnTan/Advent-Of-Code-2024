@@ -1,4 +1,4 @@
-DAY = 01
+DAY = 03
 
 COMPILER = g++
 FLAGS = -Wall -Wextra -Werror
