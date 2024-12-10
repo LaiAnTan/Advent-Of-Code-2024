@@ -19,7 +19,6 @@ std::ostream &operator << (std::ostream &os, const std::map<T, U> &map)
 	return os;
 }
 
-
 class DiskObject
 {
 	public:
@@ -145,11 +144,11 @@ int main(int argc, char **argv)
 
 	std::vector<DiskObject>	v = parseDiskMap(disk_map);
 
-	std::cout << v << std::endl;
+	// std::cout << v << std::endl;
 
 	shuffle(v);
 
-	std::cout << v << std::endl;
+	// std::cout << v << std::endl;
 
 	std::cout << calcCheckSum(v) << std::endl;
 
