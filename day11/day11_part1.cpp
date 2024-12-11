@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 
 	std::cout << stones << std::endl;
 
-	for (int i = 0; i < 50; i++)
+	for (int i = 0; i < 25; i++)
 	{
 		std::cout << "Blink " << i + 1 << std::endl;
 		blink(stones);
