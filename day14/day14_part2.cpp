@@ -82,13 +82,11 @@ int main(int argc, char **argv)
 
 		std::cout << "\033[2J\033[1;1H";
 		std::flush(std::cout);
-		std::cout << " ---- Second " << i << " ---- (Press enter for next frame)" << std::endl;
+		std::cout << " ---- Second " << i << " ---- " << std::endl;
 		for (std::vector<int> row : board)
 			std::cout << row << std::endl;
 
-		char c = getchar();
-		while (c != '\n')
-			c = getchar();
+		usleep(100000);
 	}
 
 	return (0);
