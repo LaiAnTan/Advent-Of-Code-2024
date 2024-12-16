@@ -2,8 +2,12 @@
 #include <fstream>
 #include <vector>
 #include <set>
+#include <queue>
 #include <map>
 #include <algorithm>
+#include <climits>
+#include <unistd.h>
+#include <termios.h>
 
 typedef	std::pair<int, int>	Coordinate;
 typedef std::pair<int, int>	Direction;
@@ -16,10 +20,26 @@ std::ostream &operator << (std::ostream &os, const std::vector<S> &vector)
 	return os;
 }
 
+template <typename S>
+std::ostream &operator << (std::ostream &os, const std::set<S> &set)
+{
+	for (auto i = set.begin(); i != set.end(); i++)
+		os << *i << " ";
+	return os;
+}
+
 template <typename T, typename U>
 std::ostream &operator<<(std::ostream &os, const std::pair<T, U> &pair)
 {
 	os << "(" << pair.first << ", " << pair.second << ")";
+	return os;
+}
+
+template <typename T, typename U>
+std::ostream &operator << (std::ostream &os, const std::map<T, U> &map)
+{
+	for (auto i : map)
+		os << i.first << ": " << i.second << "\n";
 	return os;
 }
 
@@ -57,51 +77,111 @@ int turnCost(Direction from, Direction to)
 	return (std::max(std::abs(from_idx - to_idx), std::abs(to_idx - from_idx)) * 1000);
 }
 
-void lowestCostPathAux(
-	Coordinate curr_pos,
-	Direction curr_dir,
-	int curr_cost,
-	Coordinate end,
-	std::set<Coordinate> visited,
-	std::vector<int> &costs,
-	std::vector<std::vector<char>> maze
-)
-{
-	// base case: we reach the end
-	if (curr_pos == end)
-	{
-		costs.push_back(curr_cost);
-		return;
-	}
+void printMaze(const std::vector<std::vector<char>>& maze) {
+    // Move the cursor up by the number of rows in the maze
+    std::cout << "\033[2J\033[1;1H";
 
+    for (const std::vector<char>& row : maze) {
+        for (char cell : row) {
+            std::cout << cell;
+        }
+        std::cout << std::endl;
+    }
+    std::flush(std::cout);
+    usleep(10000);
+}
+
+struct CompareDistance {
+    bool operator()(const std::pair<int, std::pair<Coordinate, Direction>>& a,
+                    const std::pair<int, std::pair<Coordinate, Direction>>& b)
+	{
+        return (a.first > b.first); // Min-heap based on the first element of the pair
+    }
+};
+
+int lowestCostPath(Coordinate start, Direction start_dir, Coordinate end, std::vector<std::vector<char>> maze)
+{
 	// up, down, left, right
 	std::vector<Direction> ds = {
 		{0, -1}, {0, 1}, {-1, 0}, {1, 0}
 	};
 
-	// try all possible paths, turn if necessary
-	for (Direction d : ds)
+	std::map<std::pair<Coordinate, Direction>, int>	dist;
+	std::priority_queue<
+		std::pair<int, std::pair<Coordinate, Direction>>,
+		std::vector<std::pair<int, std::pair<Coordinate, Direction>>>,
+		CompareDistance
+	>	pq;
+	std::set<std::pair<Coordinate, Direction>>		visited;
+
+	for (int y = 0; y < (int) maze.size(); y++)
 	{
-		Coordinate next = std::make_pair(curr_pos.first + d.first, curr_pos.second + d.second);
-
-		if (maze[next.second][next.first] == '#' || visited.find(next) != visited.end())
-			continue;
-
-		// lowest cost turning
-		int cost_to_turn = turnCost(curr_dir, d);
-
-		visited.insert(next);
-		lowestCostPathAux(next, d, curr_cost + 1 + cost_to_turn, end, visited, costs, maze);
-		visited.erase(next);
+		for (int x = 0; x < (int) maze[0].size(); x++)
+		{
+			if (maze[y][x] != '#')
+			{
+				Coordinate pos = std::make_pair(x, y);
+				for (Direction d : ds)
+					dist[{pos, d}] = INT_MAX;
+			}
+		}
 	}
+
+	dist[{start, start_dir}] = 0;
+	pq.push({0, {start, start_dir}});
+
+	while (!pq.empty())
+	{
+		auto [curr_dist, curr_pair] = pq.top();
+		auto [curr_pos, curr_dir] = curr_pair;
+		pq.pop();
+
+		if (visited.find(curr_pair) != visited.end())
+			continue;
+		
+		visited.insert(curr_pair);
+
+		// cost is curr tile + turn + 1
+		// find neighbours - neighbours are: next tile + same tile but diff direction
+		std::vector<std::pair<int, std::pair<Coordinate, Direction>>>	neighbours;
+
+		// 1. adjacent tile neighbours
+		Coordinate next = std::make_pair(curr_pos.first + curr_dir.first, curr_pos.second + curr_dir.second);
+
+		if (maze[next.second][next.first] != '#')
+			neighbours.push_back({curr_dist + 1, {next, curr_dir}});
+		
+		// 2. rotational neighbours
+		for (Direction d : ds)
+		{
+			if (curr_dir != d)
+				neighbours.push_back({curr_dist + turnCost(curr_dir, d), {curr_pos, d}});
+		}
+
+		for (std::pair<int, std::pair<Coordinate, Direction>> n : neighbours)
+		{
+			if (visited.find(n.second) == visited.end())
+			{
+				int new_dist = n.first;
+				if (new_dist < dist[n.second])
+				{
+					dist[n.second] = new_dist;
+					pq.push({new_dist, n.second});
+				}
+			}
+		}
+	}
+
+	// find shortest distance to E from any direction
+	std::vector<int>	dist_to_end = {
+		dist[{end, ds[0]}], dist[{end, ds[1]}], dist[{end, ds[2]}], dist[{end, ds[3]}]
+	};
+
+	std::cout << dist_to_end << std::endl;
+
+	return (*std::min_element(dist_to_end.begin(), dist_to_end.end()));
 }
 
-int lowestCostPath(Coordinate start, Direction start_dir, Coordinate end, std::vector<std::vector<char>> maze)
-{
-	std::vector<int> costs;
-	lowestCostPathAux(start, start_dir, 0, end, {}, costs, maze);
-	return (*std::min_element(costs.begin(), costs.end()));
-}
 
 int main(int argc, char **argv)
 {
@@ -126,6 +206,9 @@ int main(int argc, char **argv)
 	Coordinate start_pos = findTilePos('S', maze);
 	Coordinate end_pos = findTilePos('E', maze);
 	Direction start_dir = {1, 0};
+
+	std::cout << "Start pos: " << start_pos << std::endl;
+	std::cout << "End pos: " << end_pos << std::endl;
 
 	std::cout << lowestCostPath(start_pos, start_dir, end_pos, maze) << std::endl;
 
