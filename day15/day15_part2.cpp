@@ -5,17 +5,6 @@
 
 typedef	std::pair<int, int>	Coordinate;
 
-class Box {
-
-	public:
-		Box(Coordinate pos) : left_box_pos(pos) {};
-		Coordinate getLeft() { return (left_box_pos); }
-		Coordinate getRight() { return (std::make_pair(left_box_pos.first + 1, left_box_pos.second)); }
-		Coordinate left_box_pos;
-
-};
-
-
 template <typename S>
 std::ostream &operator << (std::ostream &os, const std::vector<S> &vector)
 {
