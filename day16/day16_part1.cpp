@@ -77,6 +77,14 @@ int turnCost(Direction from, Direction to)
 	return (std::max(std::abs(from_idx - to_idx), std::abs(to_idx - from_idx)) * 1000);
 }
 
+std::vector<Direction> getLeftRightTurns(Direction curr_dir) {
+    if (curr_dir == Direction{0, -1} || curr_dir == Direction{0, 1})
+		return {Direction{-1, 0}, Direction{1, 0}};
+	if (curr_dir == Direction{-1, 0} || curr_dir == Direction{1, 0})
+		return {Direction{0, 1}, Direction{0, -1}};
+    return {}; // Should not reach here
+}
+
 void printMaze(const std::vector<std::vector<char>>& maze) {
     // Move the cursor up by the number of rows in the maze
     std::cout << "\033[2J\033[1;1H";
@@ -149,20 +157,19 @@ int lowestCostPath(Coordinate start, Direction start_dir, Coordinate end, std::v
 		Coordinate next = std::make_pair(curr_pos.first + curr_dir.first, curr_pos.second + curr_dir.second);
 
 		if (maze[next.second][next.first] != '#')
-			neighbours.push_back({curr_dist + 1, {next, curr_dir}});
+			neighbours.push_back({1, {next, curr_dir}});
 		
 		// 2. rotational neighbours
-		for (Direction d : ds)
-		{
-			if (curr_dir != d)
-				neighbours.push_back({curr_dist + turnCost(curr_dir, d), {curr_pos, d}});
-		}
+
+		for (Direction d : getLeftRightTurns(curr_dir))
+			neighbours.push_back({1000, {curr_pos, d}});
+	
 
 		for (std::pair<int, std::pair<Coordinate, Direction>> n : neighbours)
 		{
 			if (visited.find(n.second) == visited.end())
 			{
-				int new_dist = n.first;
+				int new_dist = curr_dist + n.first;
 				if (new_dist < dist[n.second])
 				{
 					dist[n.second] = new_dist;
@@ -176,8 +183,6 @@ int lowestCostPath(Coordinate start, Direction start_dir, Coordinate end, std::v
 	std::vector<int>	dist_to_end = {
 		dist[{end, ds[0]}], dist[{end, ds[1]}], dist[{end, ds[2]}], dist[{end, ds[3]}]
 	};
-
-	std::cout << dist_to_end << std::endl;
 
 	return (*std::min_element(dist_to_end.begin(), dist_to_end.end()));
 }
