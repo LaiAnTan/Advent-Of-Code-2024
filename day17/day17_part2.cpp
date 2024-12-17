@@ -266,4 +266,14 @@ Observations:
 
 - Conclusion: 1,970,324,837,974,592 possible values of a that result in an appropriate output size
 - i.e. brute force is unviable
+
+---
+
+is this correct??
+
+1. print ((((a mod 8) ^ 2) ^ 3 ^ (a >> ((a mod 8) ^ 2))) mod 8)
+2. a = a >> 3
+3. if a != 0 go back to step 1
+
+
 */
