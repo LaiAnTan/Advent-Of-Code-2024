@@ -5,7 +5,7 @@ FLAGS = -Wall -Wextra -Werror
 
 DIR_NAME = day$(DAY)
 
-INPUT = day$(DAY)_test2.txt
+INPUT = day$(DAY)_input.txt
 
 PART1_SRCS = day$(DAY)_part1.cpp
 PART2_SRCS = day$(DAY)_part2.cpp
