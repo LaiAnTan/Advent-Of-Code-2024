@@ -59,7 +59,6 @@ int dijkstra(Coordinate start, Coordinate end, std::vector<std::vector<char>> bo
 	}
 
 	dist[start] = 0;
-
 	pq.push({0, start});
 
 	while (!pq.empty())
@@ -77,9 +76,7 @@ int dijkstra(Coordinate start, Coordinate end, std::vector<std::vector<char>> bo
 		for (Direction d : ds)
 		{
 			Coordinate next = std::make_pair(curr_pos.first + d.first, curr_pos.second + d.second);
-			if (next.first < 0 || next.second < 0 ||
-				next.first >= (int) board[0].size() || next.second >= (int) board.size() ||
-				board[next.second][next.first] != '#')
+			if (next.first < 0 || next.second < 0 || next.first >= (int) board[0].size() || next.second >= (int) board.size() || board[next.second][next.first] != '#')
 				neighbours.push_back({1, next});
 		}
 
@@ -107,7 +104,6 @@ void	simulateObstaclePlacement(std::vector<std::pair<int, int>> obstacles, int c
 	for (int i = 0; i < count; i++)
 		board[obstacles[i].second][obstacles[i].first] = '#';
 }
-
 
 int main(int argc, char **argv)
 {
