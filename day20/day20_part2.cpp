@@ -100,7 +100,7 @@ std::map<int, int> findCheats(std::vector<std::vector<char>> racetrack)
 		// (endpoint, cheat distance)
 		for (std::vector<Coordinate>::iterator pi = path.begin() + i; pi != path.end(); pi++)
 		{
-			int manhattan = std::abs(point.first - (*pi).first) + std::abs(point.second - (*pi).second);
+			int manhattan = std::abs(point.first - pi->first) + std::abs(point.second - pi->second);
 			if (manhattan >= 0 && manhattan <= 20)
 			{
 				int picoseconds_saved = std::distance(path.begin() + i, pi) - manhattan;
