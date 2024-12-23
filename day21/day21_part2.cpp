@@ -31,6 +31,7 @@ std::ostream &operator<<(std::ostream &os, const std::map<T, U> &map)
 }
 
 typedef std::pair<int, int> Coordinate, Direction;
+typedef long long ll;
 
 Coordinate findTilePos(char tile, std::vector<std::string> board)
 {
@@ -56,92 +57,118 @@ bool isInBounds(Coordinate pos, std::vector<std::string> keypad)
 	return (pos.first >= 0 && pos.second >= 0 && pos.first < cols && pos.second < rows);
 }
 
-std::string generateMoveSequence(Coordinate from, Coordinate to, std::vector<std::string> keypad)
+struct CompareDistance
 {
-	std::string s = "";
-	std::vector<Direction> ds = {
-		{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+	bool operator()(const std::pair<int, Coordinate> &a,
+					const std::pair<int, Coordinate> &b)
+	{
+		return (a.first > b.first); // Min-heap based on the first element of the pair
+	}
+};
 
+std::vector<std::string> allPossibleShortestSequences(char from, char to, std::vector<std::string> &keypad)
+{
+	Coordinate start_pos = findTilePos(from, keypad);
+	Coordinate end_pos = findTilePos(to, keypad);
 	std::map<Direction, char> dm = {
 		{{0, -1}, '^'},
 		{{0, 1}, 'v'},
 		{{-1, 0}, '<'},
 		{{1, 0}, '>'}};
+	std::vector<Direction> ds = {
+		{0, -1}, {0, 1}, {1, 0}, {-1, 0}};
 
-	// find distance from curr_pos to c
-	int h_dist = to.first - from.first;
-	int v_dist = to.second - from.second;
+	std::map<Coordinate, int> dist;
+	std::map<Coordinate, std::vector<std::string>> paths;
+	std::priority_queue<std::pair<int, Coordinate>, std::vector<std::pair<int, Coordinate>>, CompareDistance> pq;
 
-	Direction v_dir = (v_dist == 0) ? std::make_pair(0, 0) : ((v_dist > 0) ? ds[1] : ds[0]);
-	Direction h_dir = (h_dist == 0) ? std::make_pair(0, 0) : ((h_dist > 0) ? ds[3] : ds[2]);
-
-	Coordinate empty_pos = findTilePos(' ', keypad);
-
-	// if same row as space, move vertically all the way first, then move horizontally
-	if (empty_pos.second == from.second)
+	for (int y = 0; y < (int)keypad.size(); y++)
 	{
-		s.append(std::string(std::abs(v_dist), dm[v_dir]));
-		s.append(std::string(std::abs(h_dist), dm[h_dir]));
-	}
-	// if same col as space, move horizontally all the way, then move horizontally
-	else if (empty_pos.first == from.first)
-	{
-		s.append(std::string(std::abs(h_dist), dm[h_dir]));
-		s.append(std::string(std::abs(v_dist), dm[v_dir]));
-	}
-	else
-	{
-		if (dm[h_dir]  == '<')
+		for (int x = 0; x < (int)keypad[0].size(); x++)
 		{
-			s.append(std::string(std::abs(h_dist), dm[h_dir]));
-			s.append(std::string(std::abs(v_dist), dm[v_dir]));
-		}
-		else if (dm[v_dir] == 'v')
-		{
-			s.append(std::string(std::abs(v_dist), dm[v_dir]));
-			s.append(std::string(std::abs(h_dist), dm[h_dir]));
-		}
-		else
-		{
-			// does not matter, do whatever
-			s.append(std::string(std::abs(h_dist), dm[h_dir]));
-			s.append(std::string(std::abs(v_dist), dm[v_dir]));
+			if (keypad[y][x] != ' ')
+			{
+				Coordinate pos = std::make_pair(x, y);
+				dist[pos] = INT_MAX;
+				paths[pos] = {};
+			}
 		}
 	}
 
-	s.append("A");
-	return (s);
-}
+	dist[start_pos] = 0;
+	paths[start_pos] = {""};
 
-std::string buildDirectionalSequence(std::string code, std::vector<std::string> keypad)
-{
-	std::string sequence = "";
-	Coordinate curr = findTilePos('A', keypad);
+	pq.push({0, start_pos});
 
-	for (char c : code)
+	while (!pq.empty())
 	{
-		// find c on board
-		Coordinate next = findTilePos(c, keypad);
-		std::string s = generateMoveSequence(curr, next, keypad);
-		sequence += s;
-		curr = next;
+		auto [curr_dist, curr_pos] = pq.top();
+		pq.pop();
+
+		// cost is curr tile + turn + 1
+		// find neighbours - neighbours are: next tile + same tile but diff direction
+		std::vector<std::pair<int, Coordinate>> neighbours;
+
+		// 1. adjacent tile neighbours
+		for (Direction d : ds)
+		{
+			Coordinate next = std::make_pair(curr_pos.first + d.first, curr_pos.second + d.second);
+			if (isInBounds(next, keypad) && keypad[next.second][next.first] != ' ')
+				neighbours.push_back({1, next});
+		}
+
+		for (std::pair<int, Coordinate> n : neighbours)
+		{
+			int dist_thru_curr = curr_dist + n.first;
+			Coordinate n_pos = n.second;
+			// Direction n_dir = n.second.second;
+
+			// if found shorter path, change all paths to n.second to the shortest path(s)
+			if (dist_thru_curr < dist[n.second])
+			{
+				dist[n.second] = dist_thru_curr;
+
+				paths[n.second] = {};
+				for (std::string path : paths[curr_pos])
+					paths[n.second].push_back(path + dm[{n_pos.first - curr_pos.first, n_pos.second - curr_pos.second}]);
+
+				pq.push({dist[n_pos], n_pos});
+			}
+			// if found path of same length, append it to the list of path(s)
+			else if (dist_thru_curr == dist[n.second])
+			{
+				for (std::string path : paths[curr_pos])
+					paths[n.second].push_back(path + dm[{n_pos.first - curr_pos.first, n_pos.second - curr_pos.second}]);
+			}
+		}
 	}
-	return (sequence);
+
+	std::vector<std::string> paths_to_end;
+
+	if (paths.find(end_pos) != paths.end())
+	{
+		for (const auto &path : paths[end_pos])
+			paths_to_end.push_back(path);
+	}
+
+	if (paths_to_end.empty())
+		return (std::vector<std::string>());
+
+	std::sort(paths_to_end.begin(), paths_to_end.end());
+
+	int shortest = paths_to_end[0].size();
+
+	std::vector<std::string> shortest_seqs;
+
+	for (auto it = paths_to_end.begin(); it != paths_to_end.end() && (int)(*it).size() == shortest; it++)
+		shortest_seqs.push_back((*it + "A"));
+
+	return (shortest_seqs);
 }
 
-std::map<std::pair<char, char>, long> generateCountsMap(std::string code)
+std::map<std::pair<char, char>, std::vector<std::string>> generateSequenceMap(std::vector<std::string> &keypad)
 {
-	std::map<std::pair<char, char>, long> map;
-
-	for (std::string::iterator it = code.begin(); it != code.end() - 1; it++)
-		map[{*it, *(it + 1)}] += 1;
-
-	return (map);
-}
-
-std::map<std::pair<char, char>, std::string> generateSequenceMap(std::vector<std::string> &keypad)
-{
-	std::map<std::pair<char, char>, std::string> sm;
+	std::map<std::pair<char, char>, std::vector<std::string>> sm;
 
 	std::string all_chars = "";
 
@@ -154,18 +181,150 @@ std::map<std::pair<char, char>, std::string> generateSequenceMap(std::vector<std
 		{
 			if (from == ' ' || to == ' ')
 				continue;
-			sm[{from, to}] = generateMoveSequence(findTilePos(from, keypad), findTilePos(to, keypad), keypad);
+
+			sm[{from, to}] = allPossibleShortestSequences(from, to, keypad);
+			if (sm[{from, to}].empty())
+				sm[{from, to}] = {"A"};
 		}
 	}
+
 	return (sm);
 }
 
-long getLength(std::map<std::pair<char, char>, long> counts)
+ll findShortestLength(
+	std::map<std::pair<char, char>, std::string> robot_seq_map,
+	std::map<std::pair<char, char>, std::string> door_seq_map)
 {
-	int len = 0;
-	for (auto c : counts)
-		len += c.second;
-	return (len);
+	ll shortest_length = 0;
+
+	std::map<std::pair<char, char>, ll> k1;
+
+	std::cout << k1 << std::endl;
+
+	std::cout << robot_seq_map << std::endl;
+
+	// k1 is 1 below, which means we can use human press cost to calculate k1 costs
+	for (auto kv : robot_seq_map)
+		k1[kv.first] = kv.second.length();
+
+	std::map<std::pair<char, char>, ll> k2;
+
+	// use k1 and sequence map to calculate k2 costs
+	for (auto kv : robot_seq_map)
+	{
+		std::string seq = kv.second;
+		char curr = 'A';
+		for (char c : seq)
+		{
+			k2[kv.first] += k1[{curr, c}];
+			curr = c;
+		}
+	}
+
+	std::cout << "K2: " << std::endl;
+	std::cout << k2 << std::endl;
+
+	std::map<std::pair<char, char>, ll> k3;
+
+	for (auto kv : door_seq_map)
+	{
+		std::string seq = kv.second;
+		char curr = 'A';
+		for (char c : seq)
+		{
+			k3[kv.first] += k2[{curr, c}];
+			curr = c;
+		}
+	}
+
+	std::cout << "K3: " << std::endl;
+	std::cout << k3 << std::endl;
+
+	char final_curr = 'A';
+	for (char c : "029A")
+	{
+		shortest_length += k3[{final_curr, c}];
+		final_curr = c;
+	}
+
+	std::cout << shortest_length << std::endl;
+
+	return (shortest_length);
+}
+
+std::map<std::pair<char, char>, ll> getCostMap(
+	int num_intermediate_keypads,
+	std::map<std::pair<char, char>, std::vector<std::string>> robot_seq_map,
+	std::map<std::pair<char, char>, std::vector<std::string>> door_seq_map
+	)
+{
+	std::map<std::pair<char, char>, ll> curr_costs;
+	std::map<std::pair<char, char>, ll> next_costs;
+	std::map<std::pair<char, char>, ll> final_costs;
+
+	// the first keyboard is 1 below the human keypad, so we can use the human keyboard to calculate the costs for the first directional keypad
+	for (auto kv : robot_seq_map)
+	{
+		std::sort(kv.second.begin(), kv.second.end());
+		curr_costs[kv.first] = kv.second[0].length();
+	}
+
+	// the costs of the n+1-th keypad is solely dependent on the costs of the n-th keypad
+	for (int i = 0; i < num_intermediate_keypads - 1; i++)
+	{
+		next_costs = {};
+		for (auto kv : robot_seq_map)
+		{
+			std::vector<ll> possible_costs;
+			for (std::string seq : kv.second)
+			{
+				ll cost = 0;
+				char curr = 'A';
+				for (char c : seq)
+				{
+					cost += curr_costs[{curr, c}];
+					curr = c;
+				}
+				possible_costs.push_back(cost);
+			}
+			next_costs[kv.first] = *std::min_element(possible_costs.begin(), possible_costs.end());
+		}
+		curr_costs = next_costs;
+	}
+
+	// for the final cost, we have to use the door keypad instead
+	for (auto kv : door_seq_map)
+	{
+		std::vector<ll> possible_costs;
+		for (std::string seq : kv.second)
+		{
+			ll cost = 0;
+			char curr = 'A';
+			for (char c : seq)
+			{
+				cost += curr_costs[{curr, c}];
+				curr = c;
+			}
+			possible_costs.push_back(cost);
+		}
+		final_costs[kv.first] = *std::min_element(possible_costs.begin(), possible_costs.end());
+	}
+
+	return (final_costs);
+}
+
+ll findMinCodeCost(std::string code, std::map<std::pair<char, char>, ll> cost_map)
+{
+	ll min_cost = 0;
+
+	char curr = 'A';
+	for (char c : code)
+	{
+		min_cost += cost_map[{curr, c}];
+		curr = c;
+	}
+
+	return (min_cost);
 }
 
 int main(int argc, char **argv)
@@ -194,54 +353,22 @@ int main(int argc, char **argv)
 	};
 
 	// save the number of counts to and from
-	std::map<std::pair<char, char>, std::string> robot_seq_map = generateSequenceMap(robot_keypad);
-	std::map<std::pair<char, char>, std::string> door_seq_map = generateSequenceMap(door_keypad);
+	std::map<std::pair<char, char>, std::vector<std::string>> robot_seq_map = generateSequenceMap(robot_keypad);
+	std::map<std::pair<char, char>, std::vector<std::string>> door_seq_map = generateSequenceMap(door_keypad);
 
-	int complexity = 0;
+	std::cout << robot_seq_map << std::endl;
+	std::cout << door_seq_map << std::endl;
+
+	std::map<std::pair<char, char>, ll> cost_map = getCostMap(25, robot_seq_map, door_seq_map);
+
+	std::cout << cost_map << std::endl;
+
+	ll complexity = 0;
+
 	for (std::string code : codes)
-	{
-		std::cout << "Code: " << code << std::endl;
-		
-		std::string s = buildDirectionalSequence(code, door_keypad);
-		std::map<std::pair<char, char>, long>	counts = generateCountsMap(s);
+		complexity += findMinCodeCost(code, cost_map) * std::stoi(code);
 
-		for (int i = 0; i < 3; i++)
-		{
-			std::cout << "iteration " << i + 1 << std::endl;
-			// in each iteration, instead of building the string we use the counts and the sequence map to update itself
-			std::map<std::pair<char, char>, long>	next;
-
-			// for each entry, we find the string that it translates to
-			// then, update the corresponding counts
-			for (auto c : counts)
-			{
-				std::string moves = robot_seq_map[c.first];
-				std::cout << c.first << " => " << moves << std::endl;
-				if (moves == "A")
-				{
-					next[{'A', 'A'}] += c.second;
-					std::cout << std::make_pair('A', 'A') << ": " << next[{'A', 'A'}] << std::endl;
-				}
-
-				for (std::string::iterator it = moves.begin(); it != moves.end() - 1; it++)
-				{
-					next[{*it, *(it + 1)}] += c.second;
-					std::cout << std::make_pair(*it, *(it + 1)) << ": " << next[{*it, *(it + 1)}] << std::endl;
-				}
-			}
-			counts = next;
-		}
-
-		complexity += getLength(counts) * std::stoi(code);
-	}
 	std::cout << complexity << std::endl;
 
 	return (0);
 }
-
-/*
-new plan:
-
-- at every iteration, find the shortest method => too slow
-
-*/
