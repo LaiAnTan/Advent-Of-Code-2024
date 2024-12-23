@@ -191,65 +191,18 @@ std::map<std::pair<char, char>, std::vector<std::string>> generateSequenceMap(st
 	return (sm);
 }
 
-ll findShortestLength(
-	std::map<std::pair<char, char>, std::string> robot_seq_map,
-	std::map<std::pair<char, char>, std::string> door_seq_map)
+ll findCost(std::string seq, std::map<std::pair<char, char>, ll> cost_map)
 {
-	ll shortest_length = 0;
+	ll cost = 0;
 
-	std::map<std::pair<char, char>, ll> k1;
-
-	std::cout << k1 << std::endl;
-
-	std::cout << robot_seq_map << std::endl;
-
-	// k1 is 1 below, which means we can use human press cost to calculate k1 costs
-	for (auto kv : robot_seq_map)
-		k1[kv.first] = kv.second.length();
-
-	std::map<std::pair<char, char>, ll> k2;
-
-	// use k1 and sequence map to calculate k2 costs
-	for (auto kv : robot_seq_map)
+	char curr = 'A';
+	for (char c : seq)
 	{
-		std::string seq = kv.second;
-		char curr = 'A';
-		for (char c : seq)
-		{
-			k2[kv.first] += k1[{curr, c}];
-			curr = c;
-		}
+		cost += cost_map[{curr, c}];
+		curr = c;
 	}
 
-	std::cout << "K2: " << std::endl;
-	std::cout << k2 << std::endl;
-
-	std::map<std::pair<char, char>, ll> k3;
-
-	for (auto kv : door_seq_map)
-	{
-		std::string seq = kv.second;
-		char curr = 'A';
-		for (char c : seq)
-		{
-			k3[kv.first] += k2[{curr, c}];
-			curr = c;
-		}
-	}
-
-	std::cout << "K3: " << std::endl;
-	std::cout << k3 << std::endl;
-
-	char final_curr = 'A';
-	for (char c : "029A")
-	{
-		shortest_length += k3[{final_curr, c}];
-		final_curr = c;
-	}
-
-	std::cout << shortest_length << std::endl;
-
-	return (shortest_length);
+	return (cost);
 }
 
 std::map<std::pair<char, char>, ll> getCostMap(
@@ -277,16 +230,7 @@ std::map<std::pair<char, char>, ll> getCostMap(
 		{
 			std::vector<ll> possible_costs;
 			for (std::string seq : kv.second)
-			{
-				ll cost = 0;
-				char curr = 'A';
-				for (char c : seq)
-				{
-					cost += curr_costs[{curr, c}];
-					curr = c;
-				}
-				possible_costs.push_back(cost);
-			}
+				possible_costs.push_back(findCost(seq, curr_costs));
 			next_costs[kv.first] = *std::min_element(possible_costs.begin(), possible_costs.end());
 		}
 		curr_costs = next_costs;
@@ -297,35 +241,13 @@ std::map<std::pair<char, char>, ll> getCostMap(
 	{
 		std::vector<ll> possible_costs;
 		for (std::string seq : kv.second)
-		{
-			ll cost = 0;
-			char curr = 'A';
-			for (char c : seq)
-			{
-				cost += curr_costs[{curr, c}];
-				curr = c;
-			}
-			possible_costs.push_back(cost);
-		}
+			possible_costs.push_back(findCost(seq, curr_costs));
 		final_costs[kv.first] = *std::min_element(possible_costs.begin(), possible_costs.end());
 	}
 
 	return (final_costs);
 }
 
-ll findMinCodeCost(std::string code, std::map<std::pair<char, char>, ll> cost_map)
-{
-	ll min_cost = 0;
-
-	char curr = 'A';
-	for (char c : code)
-	{
-		min_cost += cost_map[{curr, c}];
-		curr = c;
-	}
-
-	return (min_cost);
-}
 
 int main(int argc, char **argv)
 {
@@ -366,7 +288,7 @@ int main(int argc, char **argv)
 	ll complexity = 0;
 
 	for (std::string code : codes)
-		complexity += findMinCodeCost(code, cost_map) * std::stoi(code);
+		complexity += findCost(code, cost_map) * std::stoi(code);
 
 	std::cout << complexity << std::endl;
 
