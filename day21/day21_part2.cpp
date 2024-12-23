@@ -274,15 +274,12 @@ int main(int argc, char **argv)
 		"<v>"
 	};
 
-	// save the number of counts to and from
 	std::map<std::pair<char, char>, std::vector<std::string>> robot_seq_map = generateSequenceMap(robot_keypad);
 	std::map<std::pair<char, char>, std::vector<std::string>> door_seq_map = generateSequenceMap(door_keypad);
+	std::map<std::pair<char, char>, ll> cost_map = getCostMap(25, robot_seq_map, door_seq_map);
 
 	std::cout << robot_seq_map << std::endl;
 	std::cout << door_seq_map << std::endl;
-
-	std::map<std::pair<char, char>, ll> cost_map = getCostMap(25, robot_seq_map, door_seq_map);
-
 	std::cout << cost_map << std::endl;
 
 	ll complexity = 0;
