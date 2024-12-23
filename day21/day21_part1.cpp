@@ -216,6 +216,81 @@ std::vector<std::string> allPossibleDirectionalSequences(
 	return (ss);
 }
 
+// above this is subpar legacy code
+
+std::string generateMoveSequence(Coordinate from, Coordinate to, std::vector<std::string> keypad)
+{
+	std::string s = "";
+	std::vector<Direction> ds = {
+		{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+
+	std::map<Direction, char> dm = {
+		{{0, -1}, '^'},
+		{{0, 1}, 'v'},
+		{{-1, 0}, '<'},
+		{{1, 0}, '>'}};
+
+	// find distance from curr_pos to c
+	int h_dist = to.first - from.first;
+	int v_dist = to.second - from.second;
+
+	Direction v_dir = (v_dist == 0) ? std::make_pair(0, 0) : ((v_dist > 0) ? ds[1] : ds[0]);
+	Direction h_dir = (h_dist == 0) ? std::make_pair(0, 0) : ((h_dist > 0) ? ds[3] : ds[2]);
+
+	Coordinate empty_pos = findTilePos(' ', keypad);
+
+	// if same row as space, move vertically all the way first, then move horizontally
+	if (empty_pos.second == from.second)
+	{
+		s.append(std::string(std::abs(v_dist), dm[v_dir]));
+		s.append(std::string(std::abs(h_dist), dm[h_dir]));
+	}
+	// if same col as space, move horizontally all the way, then move horizontally
+	else if (empty_pos.first == from.first)
+	{
+		s.append(std::string(std::abs(h_dist), dm[h_dir]));
+		s.append(std::string(std::abs(v_dist), dm[v_dir]));
+	}
+	else
+	{
+		if (dm[h_dir]  == '<')
+		{
+			s.append(std::string(std::abs(h_dist), dm[h_dir]));
+			s.append(std::string(std::abs(v_dist), dm[v_dir]));
+		}
+		else if (dm[v_dir] == 'v')
+		{
+			s.append(std::string(std::abs(v_dist), dm[v_dir]));
+			s.append(std::string(std::abs(h_dist), dm[h_dir]));
+		}
+		else
+		{
+			// does not matter, do whatever
+			s.append(std::string(std::abs(h_dist), dm[h_dir]));
+			s.append(std::string(std::abs(v_dist), dm[v_dir]));
+		}
+	}
+
+	s.append("A");
+	return (s);
+}
+
+std::string buildDirectionalSequence(std::string code, std::vector<std::string> keypad)
+{
+	std::string sequence = "";
+	Coordinate curr = findTilePos('A', keypad);
+
+	for (char c : code)
+	{
+		// find c on board
+		Coordinate next = findTilePos(c, keypad);
+		std::string s = generateMoveSequence(curr, next, keypad);
+		sequence += s;
+		curr = next;
+	}
+	return (sequence);
+}
+
 int main(int argc, char **argv)
 {
 	if (argc != 2)
@@ -249,23 +324,13 @@ int main(int argc, char **argv)
 	{
 		std::cout << "Code: " << code << std::endl;
 
-		size_t min = INT_MAX;
-		std::vector<std::string> all_robot1_press_door = allPossibleDirectionalSequences(code, door_map);
+		std::string s = buildDirectionalSequence(code, door_keypad);
+		for (int i = 0; i < 2; i++)
+			s = buildDirectionalSequence(s, robot_keypad);
 
-		// this is absolute trash
-		for (auto s1 : all_robot1_press_door)
-		{
-			std::vector<std::string> temp = allPossibleDirectionalSequences(s1, robot_map);
-			for (auto s2 : temp)
-			{
-				std::vector<std::string> temp2 = allPossibleDirectionalSequences(s2, robot_map);
-				min = std::min(min, (*std::min_element(temp2.begin(), temp2.end())).length());
-			}
-		}
-
-		std::cout << "Min length: " << min << std::endl;
+		std::cout << "Min length: " << s.length() << std::endl;
 		std::cout << "Num: " << std::stoi(code) << std::endl;
-		complexity += min * std::stoi(code);
+		complexity += s.length() * std::stoi(code);
 	}
 
 	std::cout << complexity << std::endl;

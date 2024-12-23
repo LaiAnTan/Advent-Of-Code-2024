@@ -133,6 +133,7 @@ int findBestTimetoSellButBetter(std::vector<std::pair<std::vector<int>, std::vec
 	}
 
 	int max_win = 0;
+
 	for (auto kv : main)
 		max_win = (kv.second > max_win) ? kv.second : max_win;
 
