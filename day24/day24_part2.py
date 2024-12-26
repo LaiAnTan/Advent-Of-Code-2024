@@ -9,7 +9,7 @@ def checkFullAdderStructure(x, y, cin, sout, gates):
     :param cin: Carry-in input
     :param sout: Sum output
     :param gates: List of gates in the form of (inputs, operation, output)
-    :return: The two swapped outputs, and the correct Carry-out output
+    :return: The correct Carry-out output, and the two swapped outputs
     """
 
     # assume that the parameters are guaranteed to be correct
@@ -23,12 +23,9 @@ def checkFullAdderStructure(x, y, cin, sout, gates):
     # because it is testing full adders individually.
 
     # at this point, we do not know if a or b is wrong yet
-    a = next(g[2]
-             for g in gates if (x in g[0] and y in g[0] and g[1] == "XOR"))
-    b = next(g[2]
-             for g in gates if (x in g[0] and y in g[0] and g[1] == "AND"))
-    c = next((g[2] for g in gates if (
-        cin in g[0] and a in g[0] and g[1] == "AND")), None)
+    a = next(g[2] for g in gates if (x in g[0] and y in g[0] and g[1] == "XOR"))
+    b = next(g[2] for g in gates if (x in g[0] and y in g[0] and g[1] == "AND"))
+    c = next((g[2] for g in gates if (cin in g[0] and a in g[0] and g[1] == "AND")), None)
 
     # if a is wrong, we will not find a rule where [a AND cin -> c]
     if (c is None):
@@ -39,40 +36,35 @@ def checkFullAdderStructure(x, y, cin, sout, gates):
         correct_a = next(elem for elem in operands if elem != cin)
 
         if (correct_a == b or correct_a == c):
-            found_cout = next((g[2] for g in gates if (
-                a in g[0] and g[1] == "OR")), None)
+            cout = next((g[2] for g in gates if (a in g[0] and g[1] == "OR")), None)
         else:  # both b and c are right, a swapped with cout / sout
-            found_cout = next((g[2] for g in gates if (
-                b in g[0] and c in g[0] and g[1] == "OR")), None)
+            cout = next((g[2] for g in gates if (b in g[0] and c in g[0] and g[1] == "OR")), None)
 
-        print(f"wrong a: {a} | correct a: {correct_a} | cout : {found_cout}")
+        print(f"wrong a: {a} | correct a: {correct_a} | cout : {cout}")
 
-        return [(a, correct_a), found_cout]
+        return [cout, (a, correct_a)]
 
     # at this point we know a is correct, by assumption of cin and existance of c
     # at this point, we do not know if C is correct.
 
     # we can check sout (sum) since we know a and cin are both correct.
-    found_sout = next((g[2] for g in gates if (
-        cin in g[0] and a in g[0] and g[1] == "XOR")), None)
+    found_sout = next((g[2] for g in gates if (cin in g[0] and a in g[0] and g[1] == "XOR")), None)
     # after this, we know if sout is correct or wrong.
 
     # if sout is not same then we know that sout swapped with found_sout.
     if (sout != found_sout):
 
         if (b == sout):  # sout swapped with b
-            found_cout = next((g[2] for g in gates if (
-                c in g[0] and g[1] == "OR")), None)
+            cout = next((g[2] for g in gates if (c in g[0] and g[1] == "OR")), None)
         elif (c == sout):  # sout swapped with c
-            found_cout = next((g[2] for g in gates if (
-                b in g[0] and g[1] == "OR")), None)
+            cout = next((g[2] for g in gates if (b in g[0] and g[1] == "OR")), None)
         else:  # sout swapped with cout
-            found_cout = found_sout
+            cout = found_sout
 
         print(
-            f"wrong sum: {found_sout} | correct sum: {sout} | cout : {found_cout}")
+            f"wrong sum: {found_sout} | correct sum: {sout} | cout : {cout}")
 
-        return [(sout, found_sout), found_cout]
+        return [cout, (sout, found_sout)]
 
     cout = next((g[2] for g in gates if (
         b in g[0] and c in g[0] and g[1] == "OR")), None)
@@ -108,14 +100,10 @@ def findSwapped(variables, gates):
         # rationale of assuming that swaps only happen within full adders:
         # if swaps happened between two full adders, the whole thing would inf loop / not work (not sure if this is 100% correct)
         res = checkFullAdderStructure(x, y, cin, sout, gates)
-        if len(res) == 1:
-            cin = res[0]  # the next cin
+        cin = res[0]
         if len(res) == 2:
+            swapped.update(set(res[1]))
 
-            swapped.update(set(res[0]))
-
-            # find the next cin
-            cin = res[1]
 
     return (swapped)
 
